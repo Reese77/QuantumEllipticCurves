@@ -4,7 +4,7 @@
 namespace Microsoft.Quantum.Crypto.Basics {
     open Microsoft.Quantum.Intrinsic;
     open Microsoft.Quantum.Canon;
-    open Microsoft.Quantum.Arithmetic;
+    // open Microsoft.Quantum.Arithmetic;
     open Microsoft.Quantum.Random;
     open Microsoft.Quantum.Convert;
     open Microsoft.Quantum.Diagnostics;
@@ -18,6 +18,10 @@ namespace Microsoft.Quantum.Crypto.Basics {
     ///////                                                                             ////////
     ////////////////////////////////////////////////////////////////////////////////////////////
 
+    newtype LittleEndian = (Qubit[]);
+
+
+    @EntryPoint()   
     function IsTestable () : Bool {
         body intrinsic;
     }
@@ -97,7 +101,11 @@ namespace Microsoft.Quantum.Crypto.Basics {
         use auxillaryRegister = Qubit[4] {
 
             // apply UVU† where U is outer circuit and V is inner circuit
-            ApplyWithCA(TDepthOneCCNOTOuterCircuit, TDepthOneCCNOTInnerCircuit, auxillaryRegister + [target, control1, control2]);
+            within{
+                TDepthOneCCNOTOuterCircuit(auxillaryRegister + [target, control1, control2]);
+            } apply {
+                TDepthOneCCNOTInnerCircuit(auxillaryRegister + [target, control1, control2]);
+            }
         }
     }
 
@@ -107,7 +115,7 @@ namespace Microsoft.Quantum.Crypto.Basics {
     /// - For the circuit diagram see Figure 1 on
     ///   [ Page 3 of arXiv:1210.0974v2 ](https://arxiv.org/pdf/1210.0974v2.pdf#page=2)
     operation TDepthOneCCNOTOuterCircuit (qs : Qubit[]) : Unit is Adj + Ctl {
-        EqualityFactI(Length(qs), 7, "7 qubits are expected");
+        Fact(Length(qs)==7, "7 qubits are expected");
         H(qs[4]);
         CNOT(qs[5], qs[1]);
         CNOT(qs[6], qs[3]);
@@ -146,7 +154,7 @@ namespace Microsoft.Quantum.Crypto.Basics {
     /// - For the circuit diagram see Figure 1 on
     ///   [ Page 3 of arXiv:1210.0974v2 ](https://arxiv.org/pdf/1210.0974v2.pdf#page=2)
     operation TDepthOneCCNOTInnerCircuit (qs : Qubit[]) : Unit is Adj + Ctl {
-        EqualityFactI(Length(qs), 7, "7 qubits are expected");
+        Fact(Length(qs)== 7, "7 qubits are expected");
         ApplyToEachCA(Adjoint T, qs[0 .. 2]);
         ApplyToEachCA(T, qs[3 .. 6]);
     }
@@ -171,9 +179,9 @@ namespace Microsoft.Quantum.Crypto.Basics {
     operation AndWrapper(control1 : Qubit, control2 : Qubit, target : Qubit) : Unit {
         body (...){
             if (IsMinimizeDepthCostMetric()){
-                ApplyLowDepthAnd(control1, control2, target);
+                CCNOT(control1, control2, target); // todo!
             } else {
-                ApplyAnd(control1, control2, target);
+                CCNOT(control1, control2, target); //todo!
             }
         }
         controlled (controls, ...){
@@ -320,7 +328,7 @@ namespace Microsoft.Quantum.Crypto.Basics {
                 (Controlled CNOT)(controls, (control2, target));
             }
         }
-        adjoint controlled auto;
+        controlled adjoint auto;
     }
 
     /// # Summary
@@ -343,7 +351,7 @@ namespace Microsoft.Quantum.Crypto.Basics {
                 (Controlled X)(controls, (target));
             }
         }
-        adjoint controlled auto;
+        controlled adjoint auto;
     }
 
     /// # Summary
@@ -370,7 +378,7 @@ namespace Microsoft.Quantum.Crypto.Basics {
                 (Controlled CNOT)(controls, (control2, target));
             }
         }
-        adjoint controlled auto;
+        controlled adjoint auto;
     }
 
     /// # Summary
@@ -499,7 +507,7 @@ namespace Microsoft.Quantum.Crypto.Basics {
         controlled (controls,...){
             (Controlled op)(controls, (inputs));
         }
-        adjoint controlled auto;
+        controlled adjoint auto;
     }
 
     /// # Summary
@@ -542,7 +550,7 @@ namespace Microsoft.Quantum.Crypto.Basics {
     /// ## Int
     /// The Hamming weight of the big integer.
     function HammingWeightL(value : BigInt) : Int {
-        let valArray = BigIntAsBoolArray(value);
+        let valArray = BigIntAsBoolArray(value,BitSizeL(value));
         mutable valHamWeight = 0;
         for idxVal in 0..Length(valArray)-1 {
             if (valArray[idxVal]){
@@ -603,7 +611,7 @@ namespace Microsoft.Quantum.Crypto.Basics {
                 (Controlled X)(controls, singleControls[0]);
             }
         }
-        adjoint controlled auto;
+        controlled adjoint auto;
     }
 
     /// # Summary
@@ -628,7 +636,7 @@ namespace Microsoft.Quantum.Crypto.Basics {
         }
         adjoint auto;
         controlled auto;
-        adjoint controlled auto;
+        controlled adjoint auto;
     }
 
     //SHIFTS RIGHT
@@ -639,7 +647,7 @@ namespace Microsoft.Quantum.Crypto.Basics {
             FanoutSwapReverseRegister(xs![0 .. nBits - 1]);
             FanoutSwapReverseRegister(xs![nBits .. nQubits - 1]);
         }
-        adjoint controlled auto;
+        controlled adjoint auto;
     }
 
     /// # Summary
@@ -710,7 +718,7 @@ namespace Microsoft.Quantum.Crypto.Basics {
                 FanoutToZero(outputs[0], outputs[1..nQubits - 1]);
             }
         }
-        adjoint controlled auto;
+        controlled adjoint auto;
     }
 
     /// # Summary
@@ -729,7 +737,7 @@ namespace Microsoft.Quantum.Crypto.Basics {
             (Controlled X)(controls, singleControls[0]);
             FanoutToZero(singleControls[0], singleControls[1..Length(singleControls) - 1]);
         }
-        adjoint controlled auto;
+        controlled adjoint auto;
     }
 
     /// # Summary
@@ -822,10 +830,10 @@ namespace Microsoft.Quantum.Crypto.Basics {
     /// A Counter that points to the qubits.
     function QubitsAsBasicCounter (register: Qubit[]) : Counter {
         let nQubits = Length(register);
-        let incrementInternal = ConcatenateOperations(Increment, NoOp<Unit>, LittleEndian(register), _);
+        let noOp = () => ();
+        let incrementInternal = ConcatenateOperations(Increment, noOp, LittleEndian(register), _); // from arithmetic, will fix itself
         let test = OppositeCheck(CheckIfAllZero(register, _), _);
-        let prepare = NoOp<Unit>;
-        return Counter(register, 2^nQubits, prepare, incrementInternal, test);
+        return Counter(register, 2^nQubits, noOp, incrementInternal, test);
     }
 
     /// # Summary
@@ -867,7 +875,7 @@ namespace Microsoft.Quantum.Crypto.Basics {
             (Controlled CheckIfAllOnes)(controls, (xs, output));
             ApplyToEachWrapperCA(X, xs);
         }
-        adjoint controlled auto;
+        controlled adjoint auto;
     }
 
 
@@ -909,7 +917,7 @@ namespace Microsoft.Quantum.Crypto.Basics {
         controlled (controls, ...){
             CheckIfAllOnes(controls + xs, output);
         }
-        adjoint controlled auto;
+        controlled adjoint auto;
     }
 
 
@@ -1010,7 +1018,7 @@ namespace Microsoft.Quantum.Crypto.Basics {
         controlled (controls, ...){
             CascadeControl(controls + controlQubits, output);
         }
-        adjoint controlled auto;
+        controlled adjoint auto;
     }
 
 

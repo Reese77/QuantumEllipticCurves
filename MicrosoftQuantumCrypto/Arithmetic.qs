@@ -4,14 +4,14 @@
 namespace Microsoft.Quantum.Crypto.Arithmetic {
     open Microsoft.Quantum.Measurement;
     open Microsoft.Quantum.Intrinsic;
-    open Microsoft.Quantum.Arithmetic;
+    // open Microsoft.Quantum.Arithmetic;
     open Microsoft.Quantum.Convert;
     open Microsoft.Quantum.Diagnostics;
     open Microsoft.Quantum.Math;
     open Microsoft.Quantum.Canon;
     open Microsoft.Quantum.Crypto.Basics;
 
-    open Microsoft.Quantum.ModularArithmetic.DebugHelpers ;
+    // open Microsoft.Quantum.ModularArithmetic.DebugHelpers ;
 
     ////////////////////////////////////////////////////////////////////////////////////////////
     ///////                                                                             ////////
@@ -131,7 +131,7 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
         // 	//(Controlled CarryLookAheadAdder)(controls, (xs, ys, carry));	//low depth
         // 	//(Controlled RippleCarryAdderTTK(xs, ys, carry));				//low width
         // }
-        adjoint controlled auto;
+        controlled adjoint auto;
     }
 
     /// # Summary
@@ -160,7 +160,7 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
         // controlled (controls, ...){
         // 	(Controlled CarryLookAheadAdderNoCarry)(controls, (xs, ys));
         // }
-        adjoint controlled auto;
+        controlled adjoint auto;
     }
 
     /// # Summary
@@ -191,7 +191,7 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
         }
         adjoint auto;
         controlled auto;
-        adjoint controlled auto;
+        controlled adjoint auto;
     }
 
     ////////////// End of wrappers /////////////
@@ -227,11 +227,11 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
                     for idx in 0..Length(xs!) - 1 {
                         (Controlled SWAP)([singleControls[idx]], (xs![idx], ys![idx]));
                     }
-                    (Adjoint Controlled FanoutControls)(controls, (singleControls));
+                    (controlled adjoint FanoutControls)(controls, (singleControls));
                 }
             }
         }
-        adjoint controlled auto;
+        controlled adjoint auto;
     }
 
     /// # Summary
@@ -265,11 +265,11 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
                     for idx in 0..Length(inputs!) - 1 {
                         (Controlled X)([singleControls[idx],inputs![idx]], (outputs![idx]));
                     }
-                    (Adjoint Controlled FanoutControls)(controls, (singleControls));
+                    (controlled adjoint FanoutControls)(controls, (singleControls));
                 }
             }
         }
-        adjoint controlled auto;
+        controlled adjoint auto;
     }
     
 
@@ -317,12 +317,12 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
                         for idx in 0..Length(posArray) - 1 {
                             CNOT(singleControls[idx], target![posArray[idx]]);
                         } 
-                        (Adjoint Controlled FanoutControls)(controls, (singleControls));
+                        (controlled adjoint FanoutControls)(controls, (singleControls));
                     }
                 }
             }
         }
-        adjoint controlled auto;
+        controlled adjoint auto;
     }
 
 
@@ -367,6 +367,7 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
     /// # Remarks
     /// This operation resets its input register to the all-zeros
     /// state, suitable for releasing back to a target machine.
+    @EntryPoint()
     operation MeasureBigInteger(target : LittleEndian) : BigInt {
         let targetAsBoolArray= ResultArrayAsBoolArray(MultiM(target!));
         mutable measuredBigInt = 0L;
@@ -424,7 +425,7 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
         }
         adjoint auto;
         controlled auto;
-        adjoint controlled auto;
+        controlled adjoint auto;
     }
 
     /// # Summary
@@ -480,7 +481,7 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
                 CCNOTWrapper (gs![idx-1], xs![idx + 1], gs![idx]);
             }
         }
-        adjoint controlled auto;
+        controlled adjoint auto;
     }
     
 
@@ -526,7 +527,7 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
                 }
             }
         }
-        adjoint controlled auto;
+        controlled adjoint auto;
     }
 
     /// # Summary
@@ -584,7 +585,7 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
                 (Controlled _CarryAndDivide)(controls, (constantHigher, xsHigher));
             }
         }
-        adjoint controlled auto;
+        controlled adjoint auto;
     }
 
     /// # Summary
@@ -612,7 +613,7 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
         }
         adjoint auto;
         controlled auto;
-        adjoint controlled auto;
+        controlled adjoint auto;
     }
 
 
@@ -645,7 +646,7 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
                 (Controlled ApplyXorInPlaceL)(controls, (constant, constants));
             }
         }
-        adjoint controlled auto;
+        controlled adjoint auto;
     }
 
 
@@ -1257,7 +1258,7 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
                         (Controlled _LookAheadAndComputePropagateCarries)(controls, (nQubits, propArrays));
                         (Controlled _LookAheadAndComputeGenerateCarries)(controls, (nQubits, propArrays, gens));
                         (Controlled _LookAheadTurnCarriesIntoSum)(controls, (nQubits, propArrays, gens));
-                        (Adjoint Controlled _LookAheadAndComputePropagateCarries)(controls, (nQubits, propArrays));
+                        (controlled adjoint _LookAheadAndComputePropagateCarries)(controls, (nQubits, propArrays));
                     } else {
                         _LookAheadAndComputePropagateCarries(nQubits - 1, propArrays);
                         _LookAheadAndComputeGenerateCarries(nQubits - 1, propArrays, gens);
@@ -1277,7 +1278,7 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
                                 CNOT(singleControls[ids], ys[ids]);
                                 cqCCNOTWrapper(xs[ids], singleControls[ids], ys[ids]);
                             }
-                            (Adjoint Controlled FanoutControls)(controls, (singleControls));
+                            (controlled adjoint FanoutControls)(controls, (singleControls));
                         }
                     } else {//without controls
                         X(ys[0]);
@@ -1471,7 +1472,7 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
                 ApplyToEachWrapperCA(X, xs!);
             }
         }
-        adjoint controlled auto;
+        controlled adjoint auto;
     }
 
     /// # Summary
