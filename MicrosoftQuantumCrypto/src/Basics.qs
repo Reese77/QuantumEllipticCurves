@@ -9,7 +9,6 @@ namespace Microsoft.Quantum.Crypto.Basics {
     open Microsoft.Quantum.Convert;
     open Microsoft.Quantum.Diagnostics;
     open Microsoft.Quantum.Math;
-    open Microsoft.Quantum.Crypto.Arithmetic;
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////
@@ -21,7 +20,7 @@ namespace Microsoft.Quantum.Crypto.Basics {
     newtype LittleEndian = (Qubit[]);
 
 
-    @EntryPoint()   
+
     function IsTestable () : Bool {
         body intrinsic;
     }
@@ -37,6 +36,8 @@ namespace Microsoft.Quantum.Crypto.Basics {
     function IsMinimizeWidthCostMetric () : Bool {
         body intrinsic;
 	}
+
+
 
     ///////////// Wrappers ///////////
 
@@ -562,6 +563,7 @@ namespace Microsoft.Quantum.Crypto.Basics {
 
     /// # Summary
     /// Computes the Hamming weight of an integer.
+    /// Appears to be implemented by default now
     ///
     /// # Inputs
     /// ## value
@@ -570,16 +572,16 @@ namespace Microsoft.Quantum.Crypto.Basics {
     /// # Output
     /// ## Int
     /// The Hamming weight of the integer.
-    function HammingWeightI(value : Int) : Int {
-        let valArray = IntAsBoolArray(value, BitSizeI(value));
-        mutable valHamWeight = 0;
-        for idxVal in 0..Length(valArray)-1 {
-            if (valArray[idxVal]){
-                set valHamWeight = valHamWeight+1;
-            }
-        }
-        return valHamWeight;
-    }
+    // function HammingWeightI(value : Int) : Int {
+    //     let valArray = IntAsBoolArray(value, BitSizeI(value));
+    //     mutable valHamWeight = 0;
+    //     for idxVal in 0..Length(valArray)-1 {
+    //         if (valArray[idxVal]){
+    //             set valHamWeight = valHamWeight+1;
+    //         }
+    //     }
+    //     return valHamWeight;
+    // }
 
     /// # Summary
     /// Applies a single qubit operation to 
@@ -782,59 +784,6 @@ namespace Microsoft.Quantum.Crypto.Basics {
         controlled adjoint auto;
     }
 
-    /// # Summary
-    /// Represents a qubit register that functions as a counter.
-    ///
-    /// # Contents
-    /// ## register
-    /// Points to the qubits used for the counter
-    /// ## period
-    /// The highest integer it can count to. Assumed
-    /// to return to its zero state if it is incremented
-    /// `period` times.
-    /// ## Prepare
-    /// Operation which initializes the qubit registers
-    /// to the zero state of the counter.
-    /// ## Increment
-    /// Operation which increments the counter by one
-    /// ## Test
-    /// Operation which flips the target qubit if the
-    /// counter is in any non-zero state.
-    newtype Counter = (register : Qubit[], 
-        period : Int, 
-        Prepare : (Unit => Unit is Ctl + Adj), 
-        Increment : (Unit => Unit is Ctl + Adj), 
-        Test : ((Qubit) => Unit is Ctl + Adj)
-    );
-
-    /// # Summary
-    /// Returns a qubit array as a Counter type.
-    ///
-    /// # Inputs
-    /// ## register
-    /// The qubits that wil form the counter.
-    function QubitsAsCounter(register : Qubit[]) : Counter {
-        return QubitsAsBasicCounter(register);
-    }
-
-    /// # Summary
-    /// Formats a qubit array into a Counter type,
-    /// including all necessary functions to act as a counter.
-    ///
-    /// # Inputs
-    /// ## register
-    /// The qubits that will act as the counter.
-    ///
-    /// # Output
-    /// ## Counter
-    /// A Counter that points to the qubits.
-    function QubitsAsBasicCounter (register: Qubit[]) : Counter {
-        let nQubits = Length(register);
-        let noOp = () => ();
-        let incrementInternal = ConcatenateOperations(Increment, noOp, LittleEndian(register), _); // from arithmetic, will fix itself
-        let test = OppositeCheck(CheckIfAllZero(register, _), _);
-        return Counter(register, 2^nQubits, noOp, incrementInternal, test);
-    }
 
     /// # Summary
     /// Performs the opposite test as a given test. 
@@ -856,6 +805,51 @@ namespace Microsoft.Quantum.Crypto.Basics {
         controlled adjoint auto;
     }
 
+    /// # Summary
+    /// Flips a blank output qubit if and only if all input
+    /// control qubits are in the 1 state. Uses clean ancilla
+    /// which are returned dirty.
+    ///
+    /// # Inputs
+    /// ## controlQubits
+    /// Array of qubits acting like a controlled X on the output
+    /// ## blankControlQubits
+    /// Qubits initialized to 0 which are used as ancilla.
+    /// ## output 
+    /// A qubit, assumed to be 0, which is flipped if all control
+    /// qubits are 1
+    ///
+    /// # Remarks
+    /// Identical in function to (Controlled X)(controlQubits, (output))
+    /// except the depth is lower, the output must be 0, and it uses
+    /// ancilla which are not uncomputed.
+    /// If controlQubits has n qubits, then this needs n-2 
+    /// blankControlQubits.
+    operation CompressControls(controlQubits : Qubit[], blankControlQubits : Qubit[], output : Qubit) : Unit {
+        body (...){
+            let nControls = Length(controlQubits);
+            let nNewControls = Length(blankControlQubits);
+            if (nControls == 2){
+                AndWrapper(controlQubits[0], controlQubits[1], output);
+            } else {
+                Fact(nNewControls >= nControls/2, $"Cannot compress {nControls}
+                    control qubits to {nNewControls} qubits without more ancilla");
+                Fact(nNewControls <= nControls, 
+                    $"Cannot compress {nControls} control qubits into
+                    {nNewControls} qubits because there are too few controls");
+                let compressLength = nControls - nNewControls;
+                for idx in 0.. 2 .. nControls - 2 {
+                    AndWrapper(controlQubits[idx], controlQubits[idx + 1], blankControlQubits[idx/2]);
+                }
+                if (nControls % 2 == 0){
+                    CompressControls(blankControlQubits[0.. nControls/2 - 1], blankControlQubits[nControls/2 .. nNewControls - 1], output);
+                } else {
+                    CompressControls([controlQubits[nControls - 1]] + blankControlQubits[0.. nControls/2 - 1], blankControlQubits[nControls/2 .. nNewControls - 1], output);
+                }
+            }
+        }
+        adjoint auto;
+    }
 
     /// # Summary
     /// Checks if the input register is all zeros, and if so, 
@@ -1023,145 +1017,6 @@ namespace Microsoft.Quantum.Crypto.Basics {
 
 
 
-
-    /// # Summary
-    /// Flips a blank output qubit if and only if all input
-    /// control qubits are in the 1 state. Uses clean ancilla
-    /// which are returned dirty.
-    ///
-    /// # Inputs
-    /// ## controlQubits
-    /// Array of qubits acting like a controlled X on the output
-    /// ## blankControlQubits
-    /// Qubits initialized to 0 which are used as ancilla.
-    /// ## output 
-    /// A qubit, assumed to be 0, which is flipped if all control
-    /// qubits are 1
-    ///
-    /// # Remarks
-    /// Identical in function to (Controlled X)(controlQubits, (output))
-    /// except the depth is lower, the output must be 0, and it uses
-    /// ancilla which are not uncomputed.
-    /// If controlQubits has n qubits, then this needs n-2 
-    /// blankControlQubits.
-    operation CompressControls(controlQubits : Qubit[], blankControlQubits : Qubit[], output : Qubit) : Unit {
-        body (...){
-            let nControls = Length(controlQubits);
-            let nNewControls = Length(blankControlQubits);
-            if (nControls == 2){
-                AndWrapper(controlQubits[0], controlQubits[1], output);
-            } else {
-                Fact(nNewControls >= nControls/2, $"Cannot compress {nControls}
-                    control qubits to {nNewControls} qubits without more ancilla");
-                Fact(nNewControls <= nControls, 
-                    $"Cannot compress {nControls} control qubits into
-                    {nNewControls} qubits because there are too few controls");
-                let compressLength = nControls - nNewControls;
-                for idx in 0.. 2 .. nControls - 2 {
-                    AndWrapper(controlQubits[idx], controlQubits[idx + 1], blankControlQubits[idx/2]);
-                }
-                if (nControls % 2 == 0){
-                    CompressControls(blankControlQubits[0.. nControls/2 - 1], blankControlQubits[nControls/2 .. nNewControls - 1], output);
-                } else {
-                    CompressControls([controlQubits[nControls - 1]] + blankControlQubits[0.. nControls/2 - 1], blankControlQubits[nControls/2 .. nNewControls - 1], output);
-                }
-            }
-        }
-        adjoint auto;
-    }
-
-    
-
-    /// # Summary
-    /// Runs a "quantum while loop". This runs a series of 
-    /// unitaries U_1, ..., U_n. Before each unitary, a quantum Test operation
-    /// is run. If Test comes out true (i.e., it flips a control), then the 
-    /// loop will stop running any more U_k and will instead increment a special counter.
-    /// Since the classical control does not know many iterations it will take, it runs up
-    /// to some predetermined bound.
-    ///
-    /// # Inputs
-    /// ## Body
-    /// This specifies the unitary U_k, where k is the integer input. 
-    /// ## Test
-    /// This runs some test, and flips the qubit given as input if the test passes. 
-    /// ## counter
-    /// A SpecialCounter type that must be passed initially in the all-ones state. 
-    /// ## bound
-    /// The maximum number of iterations that the while loop could possible take.
-    ///
-    /// # Reference
-    /// A generalization of the circuit for modular inversion from : 
-    ///   Martin Roetteler, Michael Naehrig, Krysta M. Svore, Kristin Lauter : 
-    ///   Quantum Resource Estimates for Computing Elliptic Curve Discrete Logarithms
-    ///   https : //eprint.iacr.org/2017/598
-    ///
-    /// # Remark
-    /// This operation is well-defined for cases where the test never passes. 
-    /// It assumes that calling Test will not change the result of calling
-    /// Test again. 
-    operation QuantumWhile(lowerBound : Int, upperBound : Int, Body : ((Int)=>Unit is Ctl + Adj), test : ((Qubit)=>Unit is Ctl + Adj), Alternate : ((Int)=>Unit is Ctl + Adj), counter : Counter) : Unit{
-        body (...){
-            (Controlled QuantumWhile)([], (lowerBound, upperBound, Body, test, Alternate, counter));
-        }	
-        controlled (controls, ...){
-            Fact(upperBound>lowerBound, $"Upper bound ({upperBound}) must be higher than lower bound ({lowerBound})");
-            Fact(upperBound-lowerBound<counter::period, $"Counter's period is {counter::period} but may need to count {upperBound-lowerBound} iterations");
-            use mainControl = Qubit() {
-	    	    // Use the main control if there are too many controls
-	    	    if (Length(controls) > 1){
-		    	    CheckIfAllOnes(controls, mainControl);
-			        for roundNum in 0..lowerBound - 1 {
-			            (Controlled Body)([mainControl], (roundNum));
-			        }
-			        (Adjoint CheckIfAllOnes)(controls, mainControl);
-		        } else {
-	    	        for roundNum in 0..lowerBound - 1 {
-			   	        (Controlled Body)(controls, (roundNum));
-			        }
-	           }
-	  	    for roundNum in lowerBound..upperBound-1 {
-                    //Logic here : maincontrol is initially 0
-                    //When the test does nothing and the counter is all 1s : 
-                    //		It runs Body[idxRound], does not increment
-                    //When the test is true but the counter is all 1s : 
-                    //		It flips maincontrol from 0 to 1
-                    //		The body is not run, the counter increments
-                    //When the test is true and the counter is not all 1s : 
-                    //		It flips maincontrol twice, keeping it at 1
-                    //		The body is not run, the counter increments
-
-                    //Runs the test
-                    (Controlled test)(controls, (mainControl));
-                    //Checks if the counter is non-start
-                    counter::Test(mainControl);
-                    //Fanout the main control to save depth
-                    use extraControls = Qubit[2] {
-                        CNOT(mainControl,extraControls[0]);
-                        CNOT(extraControls[0],extraControls[1]);
-                        //Runs the body if maincontrol is 0
-                        (Controlled X)(controls, (mainControl));
-                        (Controlled Body)([mainControl], (roundNum));
-                        (Controlled X)(controls, (mainControl));
-                        //Increments the counter if need be
-                        (Controlled counter::Increment)([extraControls[0]], ());
-                        //Otherwise, runs the alternate
-                        (Controlled Alternate)([extraControls[1]], (roundNum));
-                        CNOT(extraControls[0],extraControls[1]);
-                        CNOT(mainControl,extraControls[0]);
-                    }
-                }
-                //Clears the control
-                //If the test was positive at any point, maincontrol
-                //should be 1.
-                //Otherwise, it will be 0. 
-                //To test whether the test was ever positive, we check the
-                // counter
-                (Controlled counter::Test)(controls, (mainControl));
-            }
-        }
-        controlled adjoint auto;
-    }
 
 
     

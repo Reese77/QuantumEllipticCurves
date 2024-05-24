@@ -6,13 +6,50 @@ namespace Microsoft.Quantum.Crypto.Tests{
     open Microsoft.Quantum.Canon;
     open Microsoft.Quantum.Logical;
 	open Microsoft.Quantum.Measurement;
-	open Microsoft.Quantum.Arithmetic;
 	open Microsoft.Quantum.Diagnostics;
 	open Microsoft.Quantum.Convert;
     open Microsoft.Quantum.Arrays;
     open Microsoft.Quantum.Math;
 	open Microsoft.Quantum.Crypto.Arithmetic;
     open Microsoft.Quantum.Crypto.Basics;
+
+    @EntryPoint()
+    operation test() : Unit {
+        CCNOTTest();Message("Passed");
+        CheckIfAllOnesReversibleTest();Message("Passed");
+        EqualLookupExhaustiveReversibleTest();Message("Passed");
+        CDKMGAdderExhaustiveTest ();Message("Passed");
+        CDKMGAdderExhaustiveReversibleTest ();Message("Passed");
+        AdderExhaustiveTest ();Message("Passed");
+        AdderExhaustiveReversibleTest();Message("Passed");
+        RippleCarryAdderNoCarryTTKReversibleTest();Message("Passed");
+        RippleCarryAdderNoCarryTTKExhaustiveTest();Message("Passed");
+        RippleCarryAdderNoCarryTTKExhaustiveReversibleTest();Message("Passed");
+        CarryLookAheadAdderNoCarryExhaustiveTest();Message("Passed");
+        CarryLookAheadAdderNoCarryExhaustiveReversibleTest();Message("Passed");
+        AdderNoCarryExhaustiveTest();Message("Passed");
+        AdderNoCarryExhaustiveReversibleTest();Message("Passed");
+        AddConstantTest();Message("Passed");
+        AddConstantExhaustiveTest();Message("Passed");
+        AddConstantReversibleTest();Message("Passed");
+        AddConstantExhaustiveReversibleTest();Message("Passed");
+        AddConstantNoCarryReversibleTest();Message("Passed");
+        AddConstantNoCarryExhaustiveTest();Message("Passed");
+        AddConstantNoCarryExhaustiveReversibleTest();Message("Passed");
+        AddConstantCDKMGNoCarryReversibleTest();Message("Passed");
+        AddConstantCDKMGNoCarryExhaustiveReversibleTest();Message("Passed");
+        GreaterThanExhaustiveReversibleTest();Message("Passed");
+        GreaterThanLookAheadExhaustiveTest();Message("Passed");
+        GreaterThanLookAheadExhaustiveReversibleTest();Message("Passed");
+        GreaterThanCDKMGExhaustiveReversibleTest();Message("Passed");
+        GreaterThanConstantLookAheadExhaustiveTest();Message("Passed");
+        GreaterThanConstantExhaustiveReversibleTest();Message("Passed");
+        GreaterThanConstantExhaustiveTest();Message("Passed");
+        LessThanConstantLookAheadExhaustiveReversibleTest();Message("Passed");
+        LessThanConstantLookAheadExhaustiveTest();Message("Passed");
+        LessThanConstantExhaustiveReversibleTest();Message("Passed");
+        LessThanConstantExhaustiveTest();Message("Passed");
+    }
 
 
     operation CCNOTTestHelper(
@@ -81,7 +118,7 @@ namespace Microsoft.Quantum.Crypto.Tests{
             mutable actualOutput = Zero;
 
              //Write to qubit registers
-            ApplyXorInPlaceL(testValue, qValue);
+            ApplyXorInPlaceL(testValue, qValue!);
 
             //Run Test
             OnesTest(valueQubits, output);
@@ -95,7 +132,7 @@ namespace Microsoft.Quantum.Crypto.Tests{
             for numberOfControls in 1..2 { 
                 use controls = Qubit[numberOfControls] {
                      //Write to qubit registers
-                     ApplyXorInPlaceL(testValue, qValue);
+                     ApplyXorInPlaceL(testValue, qValue!);
 
                      //Run Test
                     (Controlled OnesTest)(controls, (valueQubits, output));
@@ -111,7 +148,7 @@ namespace Microsoft.Quantum.Crypto.Tests{
                     ApplyToEach(X, controls);
 
                       //Write to qubit registers
-                     ApplyXorInPlaceL(testValue, qValue);
+                     ApplyXorInPlaceL(testValue, qValue!);
 
                      //Run Test
                     (Controlled OnesTest)(controls, (valueQubits, output));
@@ -159,10 +196,10 @@ operation EqualLookupTestHelper(
             mutable readAddress = 0L;
 
             //Write to qubit registers
-            ApplyXorInPlaceL(IntAsBigInt(address), qAddress);
+            ApplyXorInPlaceL(IntAsBigInt(address), qAddress!);
 
             //Run Test
-            LookUp(table, ApplyXorInPlaceL(_, qValue) , qAddress);
+            LookUp(table, ApplyXorInPlaceL(_, qValue!) , qAddress);
 
             // Check results
             set outputValue = MeasureBigInteger(qValue);
@@ -173,10 +210,10 @@ operation EqualLookupTestHelper(
             for numberOfControls in 1..2 { 
                 use controls = Qubit[numberOfControls] {
                     //write to qubit registers
-                    ApplyXorInPlaceL(IntAsBigInt(address), qAddress);
+                    ApplyXorInPlaceL(IntAsBigInt(address), qAddress!);
 
                     //run test
-                    (Controlled LookUp)(controls, (table, ApplyXorInPlaceL(_, qValue), qAddress));
+                    (Controlled LookUp)(controls, (table, ApplyXorInPlaceL(_, qValue!), qAddress));
 
                     //check results
                     set outputValue = MeasureBigInteger(qValue);
@@ -188,10 +225,10 @@ operation EqualLookupTestHelper(
                     ApplyToEach(X, controls);
 
                      //write to qubit registers
-                    ApplyXorInPlaceL(IntAsBigInt(address), qAddress);
+                    ApplyXorInPlaceL(IntAsBigInt(address), qAddress!);
 
                      //run test
-                    (Controlled LookUp)(controls, (table, ApplyXorInPlaceL(_, qValue), qAddress));
+                    (Controlled LookUp)(controls, (table, ApplyXorInPlaceL(_, qValue!), qAddress));
 
                     //check results
                     set outputValue = MeasureBigInteger(qValue);
@@ -220,7 +257,7 @@ operation EqualLookUpExhaustiveTestHelper(
 
 operation EqualLookupExhaustiveReversibleTest() : Unit {
     let addressSize = 6;
-    EqualLookUpExhaustiveTestHelper(EqualLookup<BigInt>, addressSize);
+    EqualLookUpExhaustiveTestHelper(EqualLookup, addressSize);
 }
 
 
@@ -266,8 +303,8 @@ operation EqualLookupExhaustiveReversibleTest() : Unit {
                 let carry = register[2*numberOfQubits];
 
 				// Write to qubit registers
-                ApplyXorInPlaceL(summand1, summand1LE);
-                ApplyXorInPlaceL(summand2, summand2LE);
+                ApplyXorInPlaceL(summand1, summand1LE!);
+                ApplyXorInPlaceL(summand2, summand2LE!);
 
 				// Run test
                 IntegerAdderToTest(summand1LE, summand2LE, carry);
@@ -292,8 +329,8 @@ operation EqualLookupExhaustiveReversibleTest() : Unit {
                 //Difference
 
                 // Write to qubit registers
-                ApplyXorInPlaceL(summand1, summand1LE);
-                ApplyXorInPlaceL(summand2, summand2LE);
+                ApplyXorInPlaceL(summand1, summand1LE!);
+                ApplyXorInPlaceL(summand2, summand2LE!);
 
                 //Check difference results
                 // Run test
@@ -311,8 +348,8 @@ operation EqualLookupExhaustiveReversibleTest() : Unit {
                 for numberOfControls in 1..2 { 
                     use controls = Qubit[numberOfControls] {
 						// Write to qubit registers
-                        ApplyXorInPlaceL(summand1, summand1LE);
-                        ApplyXorInPlaceL(summand2, summand2LE);
+                        ApplyXorInPlaceL(summand1, summand1LE!);
+                        ApplyXorInPlaceL(summand2, summand2LE!);
 
                         // controls are |0>, no addition is computed
 						//Run test
@@ -330,8 +367,8 @@ operation EqualLookupExhaustiveReversibleTest() : Unit {
                         //Control 0 Difference
 
                         // Write to qubit registers
-                        ApplyXorInPlaceL(summand1, summand1LE);
-                        ApplyXorInPlaceL(summand2, summand2LE);
+                        ApplyXorInPlaceL(summand1, summand1LE!);
+                        ApplyXorInPlaceL(summand2, summand2LE!);
 
                         //Check difference results
                         // Run test
@@ -350,8 +387,8 @@ operation EqualLookupExhaustiveReversibleTest() : Unit {
                         //Control 1
 
 						//Write to qubit registers
-                        ApplyXorInPlaceL(summand1, summand1LE);
-                        ApplyXorInPlaceL(summand2, summand2LE);
+                        ApplyXorInPlaceL(summand1, summand1LE!);
+                        ApplyXorInPlaceL(summand2, summand2LE!);
 
                         // now controls are set to |1>, addition is computed
                         ApplyToEach(X, controls);
@@ -371,8 +408,8 @@ operation EqualLookupExhaustiveReversibleTest() : Unit {
                         //Difference
 
                         // Write to qubit registers
-                        ApplyXorInPlaceL(summand1, summand1LE);
-                        ApplyXorInPlaceL(summand2, summand2LE);
+                        ApplyXorInPlaceL(summand1, summand1LE!);
+                        ApplyXorInPlaceL(summand2, summand2LE!);
 
                         //Check difference results
                         // Run test
@@ -468,8 +505,8 @@ operation EqualLookupExhaustiveReversibleTest() : Unit {
             let summand2LE = LittleEndian(register[numberOfQubits .. 2*numberOfQubits - 1]);
  
 			// Write to qubit registers
-            ApplyXorInPlaceL(summand1, summand1LE);
-            ApplyXorInPlaceL(summand2, summand2LE);
+            ApplyXorInPlaceL(summand1, summand1LE!);
+            ApplyXorInPlaceL(summand2, summand2LE!);
 
 			// Run test
             IntegerAdderToTest(summand1LE, summand2LE);
@@ -488,8 +525,8 @@ operation EqualLookupExhaustiveReversibleTest() : Unit {
             for numberOfControls in 1..2 { 
                 use controls = Qubit[numberOfControls] {
 					//Write to qubit regiters
-                    ApplyXorInPlaceL(summand1, summand1LE);
-                    ApplyXorInPlaceL(summand2, summand2LE);
+                    ApplyXorInPlaceL(summand1, summand1LE!);
+                    ApplyXorInPlaceL(summand2, summand2LE!);
 
                     // controls are |0>, no addition is computed
 					// Run test
@@ -502,8 +539,8 @@ operation EqualLookupExhaustiveReversibleTest() : Unit {
                     Fact(summand2== actual2, $"Expected {expected}, got {actual2}");
 
 					// Write to qubit registers
-                    ApplyXorInPlaceL(summand1, summand1LE);
-                    ApplyXorInPlaceL(summand2, summand2LE);
+                    ApplyXorInPlaceL(summand1, summand1LE!);
+                    ApplyXorInPlaceL(summand2, summand2LE!);
 
                     // now controls are set to |1>, addition is computed
                     ApplyToEach(X, controls);
@@ -611,7 +648,7 @@ operation EqualLookupExhaustiveReversibleTest() : Unit {
                 let integerLE = LittleEndian(register[0 .. numberOfQubits - 1]);
  
 				// Write to qubit register
-                ApplyXorInPlaceL(integer, integerLE);
+                ApplyXorInPlaceL(integer, integerLE!);
 
 				//Run Test
                 Adder(constant, integerLE);
@@ -626,7 +663,7 @@ operation EqualLookupExhaustiveReversibleTest() : Unit {
                 for numberOfControls in 1..2 { 
                     use controls = Qubit[numberOfControls] {
 						// Write to qubit register
-                        ApplyXorInPlaceL(integer, integerLE);
+                        ApplyXorInPlaceL(integer, integerLE!);
 
                         // controls are |0>, no addition is computed
 						// Run test
@@ -637,7 +674,7 @@ operation EqualLookupExhaustiveReversibleTest() : Unit {
                         Fact(integer== actual, $"Expected {integer}, got {actual}");
 
 						//Write to qubit regsiter
-                        ApplyXorInPlaceL(integer, integerLE);
+                        ApplyXorInPlaceL(integer, integerLE!);
 
 						// controls are set to |1>, addition is computed
                         ApplyToEach(X, controls);
@@ -774,8 +811,8 @@ operation EqualLookupExhaustiveReversibleTest() : Unit {
             let result = register[2*numberOfQubits];
  
 			// Write to qubit registers
-            ApplyXorInPlaceL(integer1, integer1LE);
-            ApplyXorInPlaceL(integer2, integer2LE);
+            ApplyXorInPlaceL(integer1, integer1LE!);
+            ApplyXorInPlaceL(integer2, integer2LE!);
 
 			// Run test
             Comparator(integer1LE, integer2LE, result);
@@ -790,13 +827,13 @@ operation EqualLookupExhaustiveReversibleTest() : Unit {
             Fact(integer2== actual2, $"Expected {integer2}, got {actual2}");
             set actualr = M(result);
 			Reset(result);
-            EqualityFactB((gt == actualr), true, $"Expected {gt}, got {actualr}");
+            Fact((gt == actualr), $"Expected {gt}, got {actualr}");
 
             for numberOfControls in 1..2 { 
                 use controls = Qubit[numberOfControls] {
 					// Write to qubit register
-                    ApplyXorInPlaceL(integer1, integer1LE);
-                    ApplyXorInPlaceL(integer2, integer2LE);
+                    ApplyXorInPlaceL(integer1, integer1LE!);
+                    ApplyXorInPlaceL(integer2, integer2LE!);
 
 					//Run test
                     (Controlled Comparator) (controls, (integer1LE, integer2LE, result));
@@ -807,14 +844,14 @@ operation EqualLookupExhaustiveReversibleTest() : Unit {
                     set actual2 = MeasureBigInteger(integer2LE);
                     Fact(integer2== actual2, $"Expected {integer2}, got {actual2}");
                     set actualr = M(result);
-                    EqualityFactB((actualr == Zero), true, $"Expected Zero, got {actualr}");
+                    Fact((actualr == Zero), $"Expected Zero, got {actualr}");
 
 					// Flip controls
                     ApplyToEach(X, controls);
 
 					// Write to qubit registers
-                    ApplyXorInPlaceL(integer1, integer1LE);
-                    ApplyXorInPlaceL(integer2, integer2LE);
+                    ApplyXorInPlaceL(integer1, integer1LE!);
+                    ApplyXorInPlaceL(integer2, integer2LE!);
 
 					// Run test
                     (Controlled Comparator) (controls, (integer1LE, integer2LE, result));
@@ -826,7 +863,7 @@ operation EqualLookupExhaustiveReversibleTest() : Unit {
                     Fact(integer2== actual2, $"Expected {integer2}, got {actual2}");
                     set actualr = M(result);
 					Reset(result);
-                    EqualityFactB((gt == actualr), true, $"Expected {gt}, got {actualr}");
+                    Fact((gt == actualr), $"Expected {gt}, got {actualr}");
 
                     ResetAll(controls);
                 }
@@ -900,7 +937,7 @@ operation EqualLookupExhaustiveReversibleTest() : Unit {
             let integerLE = LittleEndian(register[0 .. numberOfQubits - 1]);
             let result = register[numberOfQubits];
  
-            ApplyXorInPlaceL(integer, integerLE);
+            ApplyXorInPlaceL(integer, integerLE!);
 
             Comparator(constant, integerLE, result);
 
@@ -908,27 +945,27 @@ operation EqualLookupExhaustiveReversibleTest() : Unit {
             set actual = MeasureBigInteger(integerLE);
             Fact(integer== actual, $"Expected {integer}, got {actual}");
             set actualr = M(result);
-            EqualityFactB((gt == actualr), true, $"Expected {gt}, got {actualr}");
+            Fact((gt == actualr), $"Expected {gt}, got {actualr}");
 
             Reset(result);
             for numberOfControls in 1..2 { 
                 use controls = Qubit[numberOfControls] {
-				    ApplyXorInPlaceL(integer, integerLE);
+				    ApplyXorInPlaceL(integer, integerLE!);
                     (Controlled Comparator) (controls, (constant,integerLE, result));
 
                     set actual = MeasureBigInteger(integerLE);
                     Fact(integer== actual, $"Control 0: Expected {integer}, got {actual}");
                     set actualr = M(result);
-                    EqualityFactB((actualr == Zero), true, $"Control 0: Expected Zero, got {actualr}");
+                    Fact((actualr == Zero), $"Control 0: Expected Zero, got {actualr}");
 
                     ApplyToEach(X, controls);
-                    ApplyXorInPlaceL(integer, integerLE);
+                    ApplyXorInPlaceL(integer, integerLE!);
                     (Controlled Comparator) (controls, (constant,integerLE, result));
 
                     set actual = MeasureBigInteger(integerLE);
                     Fact(integer== actual, $"Control 1: Expected {integer}, got {actual}");
                     set actualr = M(result);
-                    EqualityFactB((gt == actualr), true, $"Control 1: Expected {gt}, got {actualr}");
+                    Fact((gt == actualr), $"Control 1: Expected {gt}, got {actualr}");
 
                     ResetAll(controls);
                     Reset(result);
@@ -1004,7 +1041,7 @@ operation EqualLookupExhaustiveReversibleTest() : Unit {
             let result = register[numberOfQubits];
  
 			// Write to qubit register
-            ApplyXorInPlaceL(integer, integerLE);
+            ApplyXorInPlaceL(integer, integerLE!);
 
 			// Run test
             Comparator(constant, integerLE, result);
@@ -1017,12 +1054,12 @@ operation EqualLookupExhaustiveReversibleTest() : Unit {
             Fact(integer== actual, $"Expected {integer}, got {actual}");
             set actualr = M(result);
 			Reset(result);
-            EqualityFactB((gt == actualr), true, $"Expected {gt}, got {actualr}");
+            Fact((gt == actualr), $"Expected {gt}, got {actualr}");
 
             for numberOfControls in 1..2 { 
                 use controls = Qubit[numberOfControls] {
 					//Write to qubit registers
-				    ApplyXorInPlaceL(integer, integerLE);
+				    ApplyXorInPlaceL(integer, integerLE!);
 
 					// Run test
                     (Controlled Comparator) (controls, (constant,integerLE, result));
@@ -1031,13 +1068,13 @@ operation EqualLookupExhaustiveReversibleTest() : Unit {
                     set actual = MeasureBigInteger(integerLE);
                     Fact(integer== actual, $"Control 0: Expected {integer}, got {actual}");
                     set actualr = M(result);
-                    EqualityFactB((actualr == Zero), true, $"Control 0: Expected Zero, got {actualr}");
+                    Fact((actualr == Zero), $"Control 0: Expected Zero, got {actualr}");
 
 					// Flip controls
                     ApplyToEach(X, controls);
 
 					// Write to qubit register
-                    ApplyXorInPlaceL(integer, integerLE);
+                    ApplyXorInPlaceL(integer, integerLE!);
 
 					//Run test
                     (Controlled Comparator) (controls, (constant,integerLE, result));
@@ -1047,7 +1084,7 @@ operation EqualLookupExhaustiveReversibleTest() : Unit {
                     Fact(integer== actual, $"Control 1: Expected {integer}, got {actual}");
                     set actualr = M(result);
                     Reset(result);
-                    EqualityFactB((gt == actualr), true, $"Control 1: Expected {gt}, got {actualr}");
+                    Fact((gt == actualr), $"Control 1: Expected {gt}, got {actualr}");
 
                     ResetAll(controls);
                 }

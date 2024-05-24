@@ -42,8 +42,16 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
             } elif (IsMinimizeTCostMetric()){
                 CKDMGGreaterThan(xs, ys, result);
             } else {
-                GreaterThan(xs, ys, result);
+                GreaterThanTTK(xs, ys, result);
             }
+        }
+        controlled adjoint auto;
+    }
+
+    // Placeholder until we implement the real TTK adder
+    operation GreaterThanTTK(xs: LittleEndian, ys: LittleEndian, result: Qubit) : Unit {
+        body (...){
+            CKDMGGreaterThan(xs, ys, result);
         }
         controlled adjoint auto;
     }
@@ -67,7 +75,7 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
             } elif (IsMinimizeTCostMetric()) {
                 CompareToConstant(true, CKDMGGreaterThan, constant, xs, result);
             } else {
-                CompareToConstant(true, GreaterThan, constant, xs, result);
+                CompareToConstant(true, GreaterThanTTK, constant, xs, result);
             }
         }
         controlled adjoint auto;
@@ -92,7 +100,7 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
             } elif (IsMinimizeTCostMetric()) {
                 CompareToConstant(false, CKDMGGreaterThan, constant, xs, result);
             } else {
-                CompareToConstant(false, GreaterThan, constant, xs, result);
+                CompareToConstant(false, GreaterThanTTK, constant, xs, result);
             }
             //
             
@@ -134,6 +142,14 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
         controlled adjoint auto;
     }
 
+    // Todo: replace with real TTK adder
+    operation RippleCarryAdderTTK(xs: LittleEndian, ys: LittleEndian, carry: Qubit) : Unit{
+        body (...){
+            CDKMGAdder(xs, ys, carry);
+        }
+        controlled adjoint auto;
+    }
+
     /// # Summary
     /// Reversible, in-place adder with no carry. Given two n-bit integers
     /// `xs` and `ys` encoded in qubit registers and a
@@ -160,6 +176,14 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
         // controlled (controls, ...){
         // 	(Controlled CarryLookAheadAdderNoCarry)(controls, (xs, ys));
         // }
+        controlled adjoint auto;
+    }
+
+    // Todo: replace with real TTK adder
+    operation RippleCarryAdderNoCarryTTK(xs: LittleEndian, ys: LittleEndian) : Unit{
+        body (...){
+            CDKMGAdderNoCarry(xs, ys);
+        }
         controlled adjoint auto;
     }
 
@@ -227,7 +251,7 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
                     for idx in 0..Length(xs!) - 1 {
                         (Controlled SWAP)([singleControls[idx]], (xs![idx], ys![idx]));
                     }
-                    (controlled adjoint FanoutControls)(controls, (singleControls));
+                    (Controlled Adjoint FanoutControls)(controls, (singleControls));
                 }
             }
         }
@@ -265,7 +289,7 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
                     for idx in 0..Length(inputs!) - 1 {
                         (Controlled X)([singleControls[idx],inputs![idx]], (outputs![idx]));
                     }
-                    (controlled adjoint FanoutControls)(controls, (singleControls));
+                    (Controlled Adjoint FanoutControls)(controls, (singleControls));
                 }
             }
         }
@@ -274,56 +298,56 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
     
 
 
-
-    /// # Summary
-    /// ApplyXorInPlace for BigInt.
-    /// Applies X operations to qubits in a LittleEndian register
-    /// based on the 1 bits in an integer.
-    ///
-    /// # Input
-    /// ## value
-    /// Big integer which is assumed to be non-negative
-    /// ## target
-    /// Quantum register which is used to store value in LittleEndian encoding
-    ///
-    /// # Remarks
-    /// The controlled version fans out the control to ancillas, using 
-    /// as many ancilla as the number of ones in `value`.
-    operation ApplyXorInPlaceL (value : BigInt, target : LittleEndian) : Unit {
-        body (...) {
-            let valArray = BigIntAsBoolArray(value);
-            if (Length(valArray) > Length(target!)){
-                for idxVal in Length(target!)..Length(valArray) - 1 {
-                    Fact(not valArray[idxVal], $"Cannot XOR {value} into a {Length(target!)}-bit register; the number is too big");
-                }
-            }
-            for idxVal in 0..Length(valArray) - 1 {
-                if (valArray[idxVal]){
-                    X(target![idxVal]);
-                }
-            }
-        }
-        controlled (controls, ...){
-            let posArray = PositionsOfOnesInBigInt(value);
-            if (Length(posArray)>0){//if the length is zero, then value=0
-                Fact(posArray[Length(posArray) - 1] < Length(target!), $"Cannot XOR {value} into a {Length(target!)}-bit register; the number is too big");
-                if (IsMinimizeWidthCostMetric()) {
-                    for idx in 0 .. Length(posArray) - 1 {
-                        (Controlled X)(controls, (target![posArray[idx]]));
-                    }
-                } else { // not low depth
-                    use singleControls = Qubit[Length(posArray)] {
-                        (Controlled FanoutControls)(controls, (singleControls));
-                        for idx in 0..Length(posArray) - 1 {
-                            CNOT(singleControls[idx], target![posArray[idx]]);
-                        } 
-                        (controlled adjoint FanoutControls)(controls, (singleControls));
-                    }
-                }
-            }
-        }
-        controlled adjoint auto;
-    }
+    /// Appears to be present in new QDK
+    // /// # Summary
+    // /// ApplyXorInPlace for BigInt.
+    // /// Applies X operations to qubits in a LittleEndian register
+    // /// based on the 1 bits in an integer.
+    // ///
+    // /// # Input
+    // /// ## value
+    // /// Big integer which is assumed to be non-negative
+    // /// ## target
+    // /// Quantum register which is used to store value in LittleEndian encoding
+    // ///
+    // /// # Remarks
+    // /// The controlled version fans out the control to ancillas, using 
+    // /// as many ancilla as the number of ones in `value`.
+    // operation ApplyXorInPlaceL (value : BigInt, target : LittleEndian) : Unit {
+    //     body (...) {
+    //         let valArray = BigIntAsBoolArray(value, BitSizeL(value));
+    //         if (Length(valArray) > Length(target!)){
+    //             for idxVal in Length(target!)..Length(valArray) - 1 {
+    //                 Fact(not valArray[idxVal], $"Cannot XOR {value} into a {Length(target!)}-bit register; the number is too big");
+    //             }
+    //         }
+    //         for idxVal in 0..Length(valArray) - 1 {
+    //             if (valArray[idxVal]){
+    //                 X(target![idxVal]);
+    //             }
+    //         }
+    //     }
+    //     controlled (controls, ...){
+    //         let posArray = PositionsOfOnesInBigInt(value);
+    //         if (Length(posArray)>0){//if the length is zero, then value=0
+    //             Fact(posArray[Length(posArray) - 1] < Length(target!), $"Cannot XOR {value} into a {Length(target!)}-bit register; the number is too big");
+    //             if (IsMinimizeWidthCostMetric()) {
+    //                 for idx in 0 .. Length(posArray) - 1 {
+    //                     (Controlled X)(controls, (target![posArray[idx]]));
+    //                 }
+    //             } else { // not low depth
+    //                 use singleControls = Qubit[Length(posArray)] {
+    //                     (Controlled FanoutControls)(controls, (singleControls));
+    //                     for idx in 0..Length(posArray) - 1 {
+    //                         CNOT(singleControls[idx], target![posArray[idx]]);
+    //                     } 
+    //                     (Controlled Adjoint FanoutControls)(controls, (singleControls));
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     controlled adjoint auto;
+    // }
 
 
     /// # Summary
@@ -367,14 +391,14 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
     /// # Remarks
     /// This operation resets its input register to the all-zeros
     /// state, suitable for releasing back to a target machine.
-    @EntryPoint()
     operation MeasureBigInteger(target : LittleEndian) : BigInt {
-        let targetAsBoolArray= ResultArrayAsBoolArray(MultiM(target!));
+        let targetAsBoolArray= ResultArrayAsBoolArray(MeasureEachZ(target!));
         mutable measuredBigInt = 0L;
         for idxB in Length(targetAsBoolArray)-1..(-1)..0 {
             set measuredBigInt=2L * measuredBigInt;
             if (targetAsBoolArray[idxB]){
                 set measuredBigInt = measuredBigInt + 1L;
+                X(target![idxB]); // new addition
             }
         }
         ResetAll(target!);
@@ -457,7 +481,7 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
         adjoint auto;
         controlled (controls, ...) {
             let nQubits = Length(xs!);
-            let constantbittemp = BigIntAsBoolArray(constant);
+            let constantbittemp = BigIntAsBoolArray(constant, BitSizeL(constant));
             let bitextension = MaxI(nQubits-Length(constantbittemp), 1);
             let constantbits = constantbittemp + [false, size = bitextension];
             for idx in (nQubits-1)..(-1)..2 {
@@ -609,7 +633,7 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
         body (...) {
             let nQubits = Length(xs!);
             _CarryAndDivide(constant, xs);
-            ApplyXorInPlaceL(constant, xs);
+            ApplyXorInPlaceL(constant, xs!);
         }
         adjoint auto;
         controlled auto;
@@ -641,9 +665,9 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
             let nQubits = Length(xs!);
             use constantQubits = Qubit[nQubits] {
                 let constants = LittleEndian(constantQubits);
-                (Controlled ApplyXorInPlaceL)(controls, (constant, constants));
+                (Controlled ApplyXorInPlaceL)(controls, (constant, constants!));
                 AddIntegerNoCarry(constants, xs);
-                (Controlled ApplyXorInPlaceL)(controls, (constant, constants));
+                (Controlled ApplyXorInPlaceL)(controls, (constant, constants!));
             }
         }
         controlled adjoint auto;
@@ -762,9 +786,9 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
             Fact(nQubits>=BitSizeL(constant), $"{constant} is too big to add to a {nQubits} - qubit register");
             use constantQubits = Qubit[nQubits] {
                 let constants = LittleEndian(constantQubits);
-                (Controlled ApplyXorInPlaceL)(controls, (constant, constants));
+                (Controlled ApplyXorInPlaceL)(controls, (constant, constants!));
                 _CDKMGAdderInner(false, constants, xs, []);
-                (Controlled Adjoint ApplyXorInPlaceL)(controls, (constant, constants));
+                (Controlled Adjoint ApplyXorInPlaceL)(controls, (constant, constants!));
             }
         }
         controlled adjoint auto;
@@ -964,14 +988,14 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
                 let constants = LittleEndian(constantQubits);
                 if (isGreaterThan){
                     ApplyToEachWrapperCA(X, constantQubits);
-                    (Controlled ApplyXorInPlaceL)(controls, (2L^nQubits - 1L - constant, constants));
+                    (Controlled ApplyXorInPlaceL)(controls, (2L^nQubits - 1L - constant, constants!));
                     Comparator(xs, constants, carry);
-                    (Controlled Adjoint ApplyXorInPlaceL)(controls, (2L^nQubits - 1L - constant, constants));
+                    (Controlled Adjoint ApplyXorInPlaceL)(controls, (2L^nQubits - 1L - constant, constants!));
                     (Adjoint ApplyToEachWrapperCA)(X, constantQubits);
                 } else {
-                    (Controlled ApplyXorInPlaceL)(controls, (constant, constants));
+                    (Controlled ApplyXorInPlaceL)(controls, (constant, constants!));
                     Comparator(constants, xs, carry);
-                    (Controlled Adjoint ApplyXorInPlaceL)(controls, (constant, constants));
+                    (Controlled Adjoint ApplyXorInPlaceL)(controls, (constant, constants!));
                 }
                 
             }
@@ -1143,7 +1167,7 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
         body(...){
             let nQubits = Length(xs!);
             Fact(nQubits>=BitSizeL(constant), $"{constant} is too big to add to a {nQubits} - qubit register");
-            let constantArray = BigIntAsBoolArray(constant) + [false, size = nQubits - BitSizeL(constant)];
+            let constantArray = BigIntAsBoolArray(constant, BitSizeL(constant)) + [false, size = nQubits - BitSizeL(constant)];
             _CLAAdderImpl(
                 ClassicalCNOT, 
                 ClassicalCCNOT, 
@@ -1258,7 +1282,7 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
                         (Controlled _LookAheadAndComputePropagateCarries)(controls, (nQubits, propArrays));
                         (Controlled _LookAheadAndComputeGenerateCarries)(controls, (nQubits, propArrays, gens));
                         (Controlled _LookAheadTurnCarriesIntoSum)(controls, (nQubits, propArrays, gens));
-                        (controlled adjoint _LookAheadAndComputePropagateCarries)(controls, (nQubits, propArrays));
+                        (Controlled Adjoint _LookAheadAndComputePropagateCarries)(controls, (nQubits, propArrays));
                     } else {
                         _LookAheadAndComputePropagateCarries(nQubits - 1, propArrays);
                         _LookAheadAndComputeGenerateCarries(nQubits - 1, propArrays, gens);
@@ -1267,7 +1291,7 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
                     }
                     // 3) Compute the sum
                     // If it's controlled, it needs to fanout
-                    /// into ancilla to keep the depth low
+                    // into ancilla to keep the depth low
                     if (Length(controls)>0){
                         use singleControls = Qubit[nQubits - 1] {
                             (Controlled FanoutControls)(controls, (singleControls));
@@ -1278,7 +1302,7 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
                                 CNOT(singleControls[ids], ys[ids]);
                                 cqCCNOTWrapper(xs[ids], singleControls[ids], ys[ids]);
                             }
-                            (controlled adjoint FanoutControls)(controls, (singleControls));
+                            (Controlled Adjoint FanoutControls)(controls, (singleControls));
                         }
                     } else {//without controls
                         X(ys[0]);
@@ -1408,7 +1432,7 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
                 // must be greater, so we do not clip the carry
             } else {
                 let constantComplement = constant ^^^ 2L^nQubits - 1L;
-                let constantArray = BigIntAsBoolArray(constantComplement) + [false, size = nQubits - BitSizeL(constantComplement)];
+                let constantArray = BigIntAsBoolArray(constantComplement, BitSizeL(constantComplement)) + [false, size = nQubits - BitSizeL(constantComplement)];
                 _CompareLookAheadImpl(
                     ClassicalCNOT,
                     ClassicalCCNOT,
@@ -1459,7 +1483,7 @@ namespace Microsoft.Quantum.Crypto.Arithmetic {
                 // must be greater, so we fip the carry without any work
                 (Controlled X)(controls, (carry));
             } else {
-                let constantArray = BigIntAsBoolArray(constant) + [false, size = nQubits - BitSizeL(constant)];
+                let constantArray = BigIntAsBoolArray(constant, BitSizeL(constant)) + [false, size = nQubits - BitSizeL(constant)];
                 ApplyToEachWrapperCA(X, xs!);
                 (Controlled _CompareLookAheadImpl)(controls,  (
                     ClassicalCNOT,
