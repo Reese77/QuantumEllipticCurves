@@ -22,19 +22,19 @@ namespace Microsoft.Quantum.Crypto.Basics {
 
 
     function IsTestable () : Bool {
-        body intrinsic;
+        return false;
     }
 
     function IsMinimizeDepthCostMetric () : Bool {
-        body intrinsic;
+        return false;
 	}
 
     function IsMinimizeTCostMetric () : Bool {
-        body intrinsic;
+        return true;
 	}
 
     function IsMinimizeWidthCostMetric () : Bool {
-        body intrinsic;
+        return false;
 	}
 
 
